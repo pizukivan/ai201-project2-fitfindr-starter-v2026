@@ -41,6 +41,7 @@
 
 <!-- Three or four sentences: what a user asks for, and what they get back. -->
 
+FitFindr helps you find a thrifted piece and figure out how to wear it. You type what you're looking for in plain language, like "vintage graphic tee under $30, size M". It searches 40 secondhand listings from Depop, thredUp and Poshmark for the best match within your size and price. Then it suggests one or two outfits built from clothes you already own, and writes a short caption you could post about the find. If nothing matches, it stops and tells you what to loosen, such as the size, the price or the keywords, instead of making something up.
 
 
 ---
@@ -100,9 +101,19 @@
 
 **Where it lives:** `agent.py::run_agent`
 
-**How the query is parsed:** <!-- regex, string splitting, or asking the model — say which -->
+**How the query is parsed:** Regex, in `agent.py::parse_query`. It pulls out `max_price` from phrases like "under $30", "below 25" or "up to $40", and `size` only when the word "size" comes right before it ("size M", "size US 8.5", "size W30"). Whatever's left is lowercased and filler words like "looking", "for" and "a" are dropped; the remaining words become `description`. Known limits: "medium tee" isn't read as size M, and "$30 tee" with no "under" leaves the price in the description.
 
-**What moves through the session:** <!-- which fields, in what order -->
+**What moves through the session:** in order,
+1. `query`, what the user typed.
+2. `parsed`, a dict with `description`, `size` and `max_price`.
+3. `search_results`, the list from `search_listings`. The branch reads this back out of the session.
+4. `selected_item`, the first result.
+5. `suggest_outfit_item_id`, the id of the item passed to `suggest_outfit`.
+6. `outfit_suggestion`.
+7. `fit_card_item_id`, the id of the item passed to `create_fit_card`.
+8. `fit_card`.
+
+`error` is set only when the run stops early. Every tool reads its inputs from the session, never from the previous call's return value directly.
 
 ---
 
@@ -116,8 +127,16 @@
 **One full query**
 
 ```
-$ python app.py ask '...'
+$ python app.py ask 'vintage graphic tee under $30'
+  Found:    Y2K Baby Tee — Butterfly Print — $18.0 on depop
 
+  Outfit:   Outfit 1:
+Pair the Y2K Baby Tee — Butterfly Print with your baggy straight-leg jeans, dark wash. Throw on your black cropped zip hoodie for a cool layered look, and finish with your chunky white sneakers and black crossbody bag.
+
+Outfit 2:
+Style the Y2K Baby Tee — Butterfly Print tucked into your wide-leg khaki trousers. Add your vintage black denim jacket on top, and wear your black combat boots to lean into that fun, retro Y2K vibe.
+
+  Fit card: I am obsessed with this butterfly print Y2K baby tee that I just scored for only $18. I am listing it on Depop, but honestly, it was so hard not to keep for myself. You can layer it with baggy jeans and a zip hoodie for an effortless off-duty look, or dress it up with khaki trousers and combat boots for a total retro moment.
 ```
 
 **The three tools, tested one at a time**
