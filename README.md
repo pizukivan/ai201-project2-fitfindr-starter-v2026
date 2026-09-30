@@ -175,15 +175,15 @@ Found the holy grail of denim on depop with these vintage Levi's 501 jeans in th
 
 **Moment 1**
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+- *What I asked for:* Suggestions for acceptance criteria 3–5, and then for Claude to write them from the topics and targets I'd chosen (id match 5/5, exactly-once 4/5, empty wardrobe 5/5).
+- *What came back:* Full criteria with reasons. They included an empty-wardrobe criterion 5 with a phrase list, and a note that my 5/5 target for a model-dependent check needed defending.
+- *What I changed:* I replaced criterion 5 with my own rule, that no wardrobe piece is suggested twice within one outfit. I chose to count repeats within an outfit rather than across outfits, and to match distinctive words instead of full item names, because the model lowercases and shortens names.
 
 **Moment 2**
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+- *What I asked for:* For Claude to implement `suggest_outfit` from my Tool Inventory spec.
+- *What came back:* A working prompt, but it didn't ask for labeled outfits. In my first test run the model added "Outfit 1 / Outfit 2" on its own, so criterion 5 had no reliable way to split one outfit from the next.
+- *What I changed:* I had the prompt require each outfit to be labeled "Outfit 1:" and "Outfit 2:". My full sample run now shows those labels.
 
 <!-- ═══════════════════════ UNIT 4 — THE TEST ═══════════════════════
 
