@@ -59,24 +59,27 @@
 
 ### `search_listings`
 
-- **What it does:**
-- **Inputs:** <!-- name and type each: `max_price` (float), not "a price" -->
-- **Returns:**
-- **When it has nothing:**
+- **What it does:** Filters `data/listings.json` by price and size, then ranks the remaining listings by how many keywords from `description` appear in their title, description, style_tags, category, and colors. It does not call the model.
+- **Inputs:** `description` (str), the keywords the user typed, e.g. `"vintage graphic tee"`; `size` (str | None), where None skips the size filter; `max_price` (float | None), an inclusive ceiling, where None skips the price filter.
+  - *Size match rule:* This is case-insensitive and matches whole tokens only. The listing's size is split on `/`, spaces, and parentheses, and it matches if the requested size equals one of those tokens or the whole string. So `"M"` matches `"S/M"` and `"M/L"` but not `"XL"`, and `"S"` does not match `"US 9"`. `"One Size"` listings match only a request for `"one size"`.
+  - *Price rule:* A listing passes if `listing["price"] <= max_price`.
+  - *Scoring rule:* Lowercase `description` and split it on anything that isn't a letter or digit. The score is the number of distinct query words found as whole words in the listing's title, description, category, style_tags, and colors. A word also counts if it matches after a trailing "s" is dropped from either side, so "tees" matches "tee". Listings that score 0 are dropped. Ties keep their order in `listings.json`. If `description` is empty or whitespace, every listing that passes the size and price filters is returned in data order.
+- **Returns:** A `list[dict]` of listing dicts, best match first, with at most `config.SEARCH_RESULT_LIMIT` (10) items. Each dict has `id` (str), `title` (str), `description` (str), `category` (str), `style_tags` (list[str]), `size` (str), `condition` (str), `price` (float), `colors` (list[str]), `brand` (str or None), and `platform` (str: depop / thredUp / poshmark).
+- **When it has nothing:** It returns an empty list `[]`, never None and never an exception. The loop branches on `len(results) == 0`.
 
 ### `suggest_outfit`
 
-- **What it does:**
-- **Inputs:**
-- **Returns:**
-- **When it has nothing:**
+- **What it does:** Asks the model, through `generate()`, for one or two outfits built around the new item. It names pieces the user already owns when the wardrobe has items.
+- **Inputs:** `new_item` (dict), one listing dict from `search_listings`; `wardrobe` (dict), a wardrobe with an `items` key holding a `list[dict]`, where each item has `id`, `name`, `category`, `colors`, `style_tags`, and `notes`. The list may be empty.
+- **Returns:** A non-empty `str` of outfit suggestions in plain text. Each outfit names the new item plus specific wardrobe pieces by their `name`, e.g. "Baggy straight-leg jeans, dark wash".
+- **When it has nothing:** If `wardrobe["items"]` is `[]`, it returns a non-empty `str` of general styling advice for the item: what kinds of pieces, colors, and shoes pair with it, without naming owned items. It never returns `""` or None. It does not catch `ModelUnavailable` from `generate()`; that error passes up to `run_agent`.
 
 ### `create_fit_card`
 
-- **What it does:**
-- **Inputs:**
-- **Returns:**
-- **When it has nothing:**
+- **What it does:** Asks the model, through `generate()`, for a two-to-four-sentence social-post caption about the find. The caption mentions the item title, price, and platform once each.
+- **Inputs:** `outfit` (str), the string returned by `suggest_outfit`; `new_item` (dict), the same listing dict passed to `suggest_outfit`. The prompt skips `brand` when it is None.
+- **Returns:** A `str` caption of 2–4 sentences, written like a real post rather than a product description. It varies between runs because `TEMPERATURE` is 0.9.
+- **When it has nothing:** If `outfit` is empty or whitespace-only, it doesn't call the model and returns the fixed `str` `"Can't write a fit card: no outfit suggestion was provided for <title>."` As with `suggest_outfit`, `ModelUnavailable` passes up to `run_agent`.
 
 ---
 
@@ -93,7 +96,7 @@
      The grader checks your code against what you claim here, so the file and
      function have to be real. -->
 
-**Branch rule:**
+**Branch rule:** If `search_listings` returns an empty list, set `session["error"]` to a message that repeats the parsed filters and says what to loosen. For example: "Nothing matched 'ballgown' in size XXS under $5. Try raising your max price, dropping the size, or using fewer keywords." Then return the session without calling `suggest_outfit` or `create_fit_card`, so `selected_item`, `outfit_suggestion` and `fit_card` stay None. Otherwise, set `session["selected_item"]` to the first result and call `suggest_outfit(session["selected_item"], session["wardrobe"])`.
 
 **Where it lives:** `agent.py::run_agent`
 
