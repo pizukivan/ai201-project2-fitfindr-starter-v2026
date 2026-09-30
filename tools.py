@@ -211,7 +211,8 @@ def suggest_outfit(new_item: dict, wardrobe: dict) -> str:
             f"Here is what they already own:\n{owned}\n\n"
             "Suggest 1-2 outfits built around the new item. Each outfit must use "
             "pieces from their wardrobe, named exactly as written in the list above. "
-            "Do not invent pieces they don't own. Keep it under 120 words."
+            "Do not invent pieces they don't own. Label each outfit on its own line "
+            "as 'Outfit 1:', 'Outfit 2:'. Keep it under 120 words."
         )
 
     reply = (generate(prompt, system=system) or "").strip()

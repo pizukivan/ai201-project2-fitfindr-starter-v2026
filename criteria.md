@@ -74,19 +74,24 @@ once" can't be checked by exact match.
 
 ---
 
-## 5. An empty wardrobe still produces a fit card without inventing owned items
+## 5. No wardrobe piece is suggested twice within one outfit
 
-With `get_empty_wardrobe()` and a matching query, (a) the run ends with
-`session["error"]` equal to None and a non-empty `fit_card` in 5 of 5 tries, and
-(b) the outfit suggestion contains none of the phrases "you own", "you already
-have", "in your closet", "in your wardrobe", or "from your wardrobe" in at least
-4 of 5 tries.
+With `get_example_wardrobe()` and 5 different matching items, split each outfit
+suggestion into outfits at its "Outfit 1", "Outfit 2" headings (no headings =
+the whole text is one outfit; text before the first heading is ignored). Within
+each outfit, count case-insensitive occurrences of each wardrobe piece's
+distinctive phrase: "straight-leg jeans", "khaki trousers", "ribbed tank",
+"crewneck sweatshirt", "zip hoodie", "denim jacket", "white sneakers",
+"combat boots", "leather belt", "crossbody bag". No phrase appears more than
+once in any single outfit — in at least 4 of 5 suggestions.
 
 **Why this target:**
-Part (a) is plain code: `suggest_outfit` has an empty-wardrobe branch that never
-returns `""`, so the run should always finish. Part (b) depends on the model
-following the "don't imply they own anything" instruction, so it gets one slip
-like criterion 4. The phrase list makes it checkable without judgment calls.
+The outfit comes from a model writing free text, and the prompt doesn't forbid
+repeats, so a slip is possible; 4 of 5 allows one. Repeating a piece inside one
+outfit is unusual even for a model, so I didn't go lower. Distinctive phrases
+catch the pieces even when the model lowercases or shortens their names, and
+skipping the intro keeps "since you already own the ribbed tank" from counting
+as a repeat.
 
 ---
 
