@@ -25,9 +25,10 @@ Given a query that matches at least one listing, the agent completes all three
 tool calls and returns a fit card — in at least 4 of 5 tries.
 
 **Why this target:**
-<!-- Why 4 of 5 and not 5 of 5? Something about your search, probably —
-     "my search is a plain keyword match and some phrasings will miss" is a
-     real answer. -->
+Search is plain keyword matching with no synonyms, so some phrasings will miss
+or rank the wrong item first ("graphic tee" also returned cargo pants), and two
+of the three steps call the model, which can fail. 4 of 5 leaves room for one
+miss without calling the agent unreliable.
 
 ---
 
@@ -37,66 +38,55 @@ Given a query that matches no listings, the agent stops before calling
 `suggest_outfit` and returns a message naming what to change — 5 of 5 tries.
 
 **Why this target:**
-<!-- Why is 5 of 5 reasonable here when criterion 1 isn't? What's different
-     about this path? -->
+The stop is a plain `if` check on an empty list, and no model runs before it.
+The message is built from the parsed filters, so it names what to change every
+time. Any miss here is a bug, not bad luck.
 
 ---
 
-## 3. Something about state
+## 3. The selected item is the same item every tool receives
 
-<!-- YOU WRITE THIS ONE.
-
-     How would you know that the item your search found is the same item the
-     next tool received? Name something countable or observable.
-
-     This is the criterion people find hardest, because state failure doesn't
-     look like state failure — it looks like a tool problem. Something that
-     compares session["selected_item"] against what actually reached
-     suggest_outfit is the shape you're after. -->
-
-
+For 5 matching queries, the `id` of `session["selected_item"]` equals
+`session["search_results"][0]["id"]`, and equals the `id` of the item passed to
+both `suggest_outfit` and `create_fit_card` (as shown in the trace) — 5 of 5
+tries.
 
 **Why this target:**
-
-
+The model never touches the id. The loop stores the item in the session and
+passes that same dict along, all in plain code. If an id ever doesn't match,
+the session handling is broken, not the model.
 
 ---
 
-## 4. Something about the fit card
+## 4. The fit card mentions price and platform exactly once and stays caption-length
 
-<!-- YOU WRITE THIS ONE.
-
-     The fit card calls a model, so the same input can produce different words
-     each time. That's not a bug — it's the nature of the tool. So what would
-     make it acceptable?
-
-     Think about what you'd actually be unhappy to see. A caption that never
-     mentions the price? Two different items producing the same opening
-     sentence? A card longer than a caption anyone would post? Any of those can
-     be turned into a number. -->
-
-
+For 5 different matching items, each fit card contains the price exactly once
+(written as `$` plus the number, e.g. `$24`), contains the platform name exactly
+once (case-insensitive), and is 2–4 sentences long (counting sentences ending in
+`.`, `!`, or `?`) — in at least 4 of 5 cards.
 
 **Why this target:**
-
-
+The caption comes from a model at temperature 0.9. The prompt spells out these
+rules, but the model can still repeat the price or drop the platform, so 4 of 5
+allows one slip. I didn't go lower because the rules are explicit in the
+prompt. I left the title out because the model paraphrases it, so "exactly
+once" can't be checked by exact match.
 
 ---
 
-## 5. Your choice
+## 5. An empty wardrobe still produces a fit card without inventing owned items
 
-<!-- YOU WRITE THIS ONE TOO.
-
-     Pick something you actually care about getting right. Speed, the empty
-     wardrobe path, what happens when the model can't be reached, whether the
-     search respects a price ceiling — anything, as long as it names a number
-     or an observable outcome. -->
-
-
+With `get_empty_wardrobe()` and a matching query, (a) the run ends with
+`session["error"]` equal to None and a non-empty `fit_card` in 5 of 5 tries, and
+(b) the outfit suggestion contains none of the phrases "you own", "you already
+have", "in your closet", "in your wardrobe", or "from your wardrobe" in at least
+4 of 5 tries.
 
 **Why this target:**
-
-
+Part (a) is plain code: `suggest_outfit` has an empty-wardrobe branch that never
+returns `""`, so the run should always finish. Part (b) depends on the model
+following the "don't imply they own anything" instruction, so it gets one slip
+like criterion 4. The phrase list makes it checkable without judgment calls.
 
 ---
 
